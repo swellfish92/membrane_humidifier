@@ -6,6 +6,7 @@ from CoolProp.HumidAirProp import HAPropsSI
 # from Material_properties import air
 import matplotlib.pyplot as plt
 
+# 난 집에가기싫은데?
 
 class module_class:
     def __init__(self, var_dict):
