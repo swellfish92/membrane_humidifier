@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from CoolProp.CoolProp import HAPropsSI
 
+import matplotlib
+matplotlib.use('TkAgg')
+
 data = pd.read_csv('./export_result.csv', encoding='ANSI')
 print(data)
 
@@ -43,10 +46,11 @@ for v_water in data['v_w_in'].unique():
     sliced_data = data[(data['v_w_in'] == v_water)]
     valid_data = sliced_data[sliced_data['design_cond'] == 'PASS']
 
-    v_lpm = v_water * 1000 * 60  # m³/s → L/min 변환
-    label_T_a_out = f"T_a_out: v = {v_lpm:.1f} L/min" # 소수점 1자리 정수로 출력
-    label_rh_a_out = f"RH_out: v = {v_lpm:.1f} L/min"
-    label_m_humidified = f"Humidified : v = {v_lpm:.1f} L/min"
+    # v_lpm = v_water * 1000 * 60  # m³/s → L/min 변환
+    v_lpm = v_water * 1800
+    label_T_a_out = f"T_a_out: v = x {v_lpm:.0f}" # 소수점 1자리 정수로 출력
+    label_rh_a_out = f"RH_out: v = x {v_lpm:.0f}"
+    label_m_humidified = f"Humidified : v = x {v_lpm:.0f}"
 
     label_v=f"{v_water:.4f}"
 
@@ -77,6 +81,7 @@ for v_water in data['v_w_in'].unique():
     ax[2].set_title('Humidification amount vs Membrane Thickness')
     ax[2].legend()
 
+fig.text(0.9, 0.05, '* V is the ratio of the multiplier of the flowrate of each membrane tube (1/1800 lpm)', fontsize = 12, horizontalalignment='right')
 
 
 ax[0].legend()
