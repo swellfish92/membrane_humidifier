@@ -11,8 +11,8 @@ import shelled_tube as Shellandtube
 import numerical_simulation as rectangular_module
 import traceback
 import os
+import CoolProp.CoolProp as CP
 from pathlib import Path
-
 
 def get_onedrive_path():
     # On Windows, the OneDrive path is stored in an environment variable
@@ -199,29 +199,33 @@ def membrane_simulation(input_dict, module_var_dict):
     return result_df
 
 
+from ERV_module import *
+
+
 # calculate simulation result
 if __name__ == '__main__':
 
 
     df_dict_arr = []
 
-    for depth in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]:
+    for depth in [0.1, 0.15, 0.2, 0.25, 0.3]:
         for v_water_in in [1, 2, 3]:
             # 실 체적
             room_volume = 8 * 5 * 2.4
+            room_volume = 173.9
 
-            # 외기조건
-            t_ext_air = 0
-            rh_ext_air = 55
+            # 외기조건 (에절기준 참조)
+            t_ext_air = -11.3
+            rh_ext_air = 63
 
             # 환기조건
-            ventilation_ratio = 0.5
+            ventilation_ratio = 0.8695
 
             # 멤브레인 특성값
             D_w = 1.85E-06
             k_f = 4.63E-03 / 1000  # kW/mK
-            length = 0.4   # length of fiber [m]
-            height = 0.5    # height of fiber [m]
+            length = 0.1   # length of fiber [m]
+            height = 0.1    # height of fiber [m]
             # depth = 0.04   # depth of fiber [m] (Thickness)
 
             # 중공사 밀도가 일정하게 유지되도록 중공사 수를 조정. 중공사당 유량도 동일하게 수정
@@ -233,10 +237,21 @@ if __name__ == '__main__':
 
             # 모듈에 들어가는 물 및 공기의 조건 정의 (공기 - 실내공기, 물 - 급수온도 (해당 절기 시수온도))
             t_air_in = 20
-            rh_air_in = 58.92
-            t_water_in = 10
-            v_air_in = 1300
+            rh_air_in = 55
+            t_water_in = 60
+            v_air_in = 100
             # v_water_in = 1
+
+            # ERV 조건 (계산시 t/rh air_in을 덮어쓴다)
+            erv = ERV_module()
+            p_atm = 101325  # Pa
+            w_air_in = CP.HAPropsSI('W', 'T', t_air_in + 273.1, 'R', rh_air_in/100, 'P', p_atm)
+            w_ext_air = CP.HAPropsSI('W', 'T', t_ext_air + 273.1, 'R', rh_ext_air/100, 'P', p_atm)
+            t_erv, w_erv = erv.calc_air(t_air_in, w_air_in, t_ext_air, w_ext_air)
+
+            rh_erv = CP.HAPropsSI('R', 'T', t_erv + 273.1, 'W', w_erv, 'P', p_atm)
+            t_air_in = t_erv
+            rh_air_in = rh_erv
 
             # Module information
             module_var_dict = {
@@ -265,7 +280,11 @@ if __name__ == '__main__':
                 'rh_air_in' : rh_air_in,
                 't_water_in' : t_water_in,
                 'v_air_in' : v_air_in,
-                'v_water_in' : v_water_in
+                'v_water_in' : v_water_in,
+                # ERV 모델
+                't_erv' : t_erv,
+                'rh_erv' : rh_erv,
+                'w_erv' : w_erv
             }
 
             result_simulation = membrane_simulation(input_dict, module_var_dict)

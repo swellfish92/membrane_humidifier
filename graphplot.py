@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from CoolProp.CoolProp import HAPropsSI
+import CoolProp.CoolProp as CP
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -10,30 +11,53 @@ print(data)
 
 data['m_humidified'] = data['m_humidified'] * 3600 # kg/s -> g/h
 # 외기/보충 공기/배기 조건 설정
-m_oa = 0.01654 # 외기 유량
-omega_oa = 0.0021 # 외기 절대 습도(0℃, RH 55%)
-m_makeup = 0.4168 # 보충 공기 유량 (전체 유량 - 외기 유량)
-omega_mu = 0.0086 # 보충 공기 절대 습도 (실내 조건: 20℃, RH 58.92%)
-m_ea = 0.4333 # 배기 유량 = 전체 유입량 (steady-state)
-omega_ea = 0.008 # 배기 습도 = 실내 조건 기준
+# m_oa = 0.01654 # 외기 유량
+# omega_oa = 0.0021 # 외기 절대 습도(0℃, RH 55%)
+# m_makeup = 0.4168 # 보충 공기 유량 (전체 유량 - 외기 유량)
+# omega_mu = 0.0086 # 보충 공기 절대 습도 (실내 조건: 20℃, RH 58.92%)
+# m_ea = 0.4333 # 배기 유량 = 전체 유입량 (steady-state)
+# omega_ea = 0.008 # 배기 습도 = 실내 조건 기준
 
-left = m_oa * omega_oa + m_makeup * omega_mu
-# 외기 도입량 * (실내 절대 습도 - 실외 절대 습도) = 가습량 = 실내기 유량 * (실내기 출구 절대 습도 - 실내기 입구 절대 습도)
-right = m_ea * omega_ea
-delta = right - left
+# 외기조건 (에절기준 참조)
+t_ext_air = 13.74
+rh_ext_air = 60.25
+# 실내조건 (에절기준 참조 - 습도는 적당한 값)
+t_air_in = 20
+rh_air_in = 55
 
-print("[Steady-State 검토]")
-print("유입 수분량 (left):", left)
-print("유출 수분량 (right):", right)
-print("차이 (right - left):", delta)
+p_atm = 101325  # Pa
+V_ea = 100      # CMH
 
-if abs(delta) < 1e-5:
-    print("Steady-state")
-else:
-    print("Steady-state 아님")
+# Vha_ea = CP.HAPropsSI('Vha', 'T', t_ext_air + 273.1, 'R', rh_ext_air/100, 'P', p_atm)
+# print(Vha_ea)
+# raise IOError
+# m_ea = V_ea / Vha_ea
+m_ea = V_ea * 1.22
+omega_oa = CP.HAPropsSI('W', 'T', t_ext_air + 273.1, 'R', rh_ext_air/100, 'P', p_atm)
+omega_ea = CP.HAPropsSI('W', 'T', rh_air_in + 273.1, 'R', rh_air_in/100, 'P', p_atm)
+m_oa = m_ea
 
-# 수분 손실량 계산 (g/h)
-data['m_loss'] = (m_ea * omega_ea - (m_oa * omega_oa + m_makeup * omega_mu)) * 3600 * 1000
+data['m_loss'] = m_ea * (omega_ea - omega_oa)
+
+print(data['m_loss'])
+
+# left = m_oa * omega_oa + m_makeup * omega_mu
+# # 외기 도입량 * (실내 절대 습도 - 실외 절대 습도) = 가습량 = 실내기 유량 * (실내기 출구 절대 습도 - 실내기 입구 절대 습도)
+# right = m_ea * omega_ea
+# delta = right - left
+#
+# print("[Steady-State 검토]")
+# print("유입 수분량 (left):", left)
+# print("유출 수분량 (right):", right)
+# print("차이 (right - left):", delta)
+#
+# if abs(delta) < 1e-5:
+#     print("Steady-state")
+# else:
+#     print("Steady-state 아님")
+#
+# # 수분 손실량 계산 (g/h)
+# data['m_loss'] = (m_ea * omega_ea - (m_oa * omega_oa + m_makeup * omega_mu)) * 3600 * 1000
 
 # 조건 판단
 data['design_cond'] = data.apply(
@@ -68,17 +92,17 @@ for v_water in data['v_w_in'].unique():
 
     ax[0].set_xlabel('Thickness [m]')
     ax[0].set_ylabel('Outlet Air Temperature [℃]')
-    ax[0].set_title('Outlet Air Temperature vs Membrane Thickness')
+    ax[0].set_title('Outlet Air Temperature')
     ax[0].legend()
 
     ax[1].set_xlabel('Thickness [m]')
     ax[1].set_ylabel('Outlet Relative Humidity [%]')
-    ax[1].set_title('Outlet Relative Humidity vs Membrane Thickness')
+    ax[1].set_title('Outlet Relative Humidity')
     ax[1].legend()
 
     ax[2].set_xlabel('Thickness [m]')
-    ax[2].set_ylabel('Humidification Amount [g/h]')
-    ax[2].set_title('Humidification amount vs Membrane Thickness')
+    ax[2].set_ylabel('Humidification Amount [kg/h]')
+    ax[2].set_title('Humidification amount')
     ax[2].legend()
 
 fig.text(0.9, 0.05, '* V is the ratio of the multiplier of the flowrate of each membrane tube (1/1800 lpm)', fontsize = 12, horizontalalignment='right')

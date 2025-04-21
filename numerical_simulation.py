@@ -6,8 +6,6 @@ from CoolProp.HumidAirProp import HAPropsSI
 # from Material_properties import air
 import matplotlib.pyplot as plt
 
-# 아 집에가고싶다
-
 class module_class:
     def __init__(self, var_dict):
         try:
